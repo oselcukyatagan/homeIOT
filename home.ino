@@ -5,11 +5,13 @@
 #include <SinricProBlinds.h>
 #include <SinricProLight.h>
 
+// ================= CREDENTIALS =================
 // ================= CREDENTIALS ================= //   ADD THE CREDENTIALS
 #define WIFI_SSID         
 #define WIFI_PASS         
 #define APP_KEY           
 #define APP_SECRET        
+#define BLINDS_ID         
 #define BLINDS_ID        
 #define LIGHT_ID          
 
@@ -18,6 +20,20 @@
 #define RELAY_PWR   19 
 
 // RGB Pins (Inverted Logic: High = Off)
+#define PIN_RED     4
+#define PIN_GREEN   5 
+#define PIN_BLUE    6 
+
+// Microphone Analog Pin
+#define PIN_MIC     9
+
+// ================= CLAP DETECTION =================
+#define CLAP_THRESHOLD    1200  // Minimum amplitude deviation from DC bias (2048)
+#define CLAP_DEBOUNCE_MS  250   // Minimum time between claps to ignore acoustic reflections
+#define CLAP_WINDOW_MS    800   // Maximum allowable time between first and second clap
+
+unsigned long lastClapTime = 0;
+int clapCount = 0;
 #define PIN_RED     25
 #define PIN_GREEN   27 
 #define PIN_BLUE    26 
@@ -260,6 +276,54 @@ void checkWebClient() {
   client.stop();
 }
 
+////////////////////////////////////
+// LOGIC: CLAP DETECTION
+////////////////////////////////////
+void detectDoubleClap() {
+  if (isMusicMode) return; 
+
+  int raw = analogRead(PIN_MIC);
+  
+  // Dynamically track true DC bias to prevent static offset triggering
+  dcOffset = (dcOffset * 0.999) + (raw * 0.001); 
+  
+  // Measure transient against the calibrated baseline
+  int amplitude = abs(raw - dcOffset); 
+
+  if (amplitude > CLAP_THRESHOLD) {
+    unsigned long now = millis();
+    
+    if (clapCount == 0) {
+      clapCount = 1;
+      lastClapTime = now;
+    } else if (clapCount == 1) {
+      unsigned long timeSinceLast = now - lastClapTime;
+      
+      // Reject continuous noise spikes that happen faster than physical claps
+      if (timeSinceLast > CLAP_DEBOUNCE_MS && timeSinceLast < CLAP_WINDOW_MS) {
+        updateActivity();
+        lightPower = !lightPower;
+        
+        if (lightPower) setLEDs(targetR, targetG, targetB);
+        else setLEDs(0, 0, 0);
+        
+        SinricProLight &myLight = SinricPro[LIGHT_ID];
+        myLight.sendPowerStateEvent(lightPower);
+        
+        clapCount = 0; 
+      } else if (timeSinceLast >= CLAP_WINDOW_MS) {
+        // Window expired, treat as new first clap
+        lastClapTime = now;
+      }
+    }
+  }
+
+  // Reset state machine if window expires
+  if (clapCount == 1 && (millis() - lastClapTime > CLAP_WINDOW_MS)) {
+    clapCount = 0;
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   
@@ -305,6 +369,8 @@ void setup() {
 }
 
 void loop() {
+
+  
   SinricPro.handle();
   
   // Sleep Logic
@@ -317,5 +383,8 @@ void loop() {
   // Active Loops
   handleBlinds();
   handleMusic();
+  detectDoubleClap(); // Added function call
+  checkWebClient();
+  
   checkWebClient();
 }
