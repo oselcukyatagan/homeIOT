@@ -190,6 +190,7 @@ void setup() {
   setLEDs(0, 0, 0);
 
   WiFi.begin(WIFI_SSID, WIFI_PASS);
+  WiFi.setSleep(true); 
 
   unsigned long startAttempt = millis();
 
