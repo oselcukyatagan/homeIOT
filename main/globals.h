@@ -4,7 +4,6 @@
 #include <Arduino.h>
 #include <WiFi.h>
 
-
 // Web
 extern WiFiServer webServer;
 extern bool isWebStarted;
@@ -12,6 +11,16 @@ extern bool isWebStarted;
 // Global states
 extern bool isMusicMode;
 
+
+// Auto-off variables
+extern int minutesRemaining;
+extern unsigned long lastCheckMillis;
+extern bool isCurrentlyListening;
+extern bool audioDetectedInWindow;
+extern String lastDetectionStatus;
+
+// Update forward declarations
+void handleAutoOff();
 
 // Light state
 extern int targetR;

@@ -22,6 +22,10 @@
 #define LPF_ALPHA       0.2 
 #define NOISE_GATE      30
 
-
+// ================= AUTO-OFF CONFIG =================
+#define CHECK_INTERVAL_MS     60000  // 1 minute total cycle
+#define LISTEN_DURATION_MS    5000   // 5 seconds of active listening
+#define SILENCE_TIMEOUT_MIN   15     // Turn off after 15 silent checks
+#define AUTO_OFF_THRESHOLD    300    // Threshold to ignore low noise
 
 #endif
