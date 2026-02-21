@@ -1,14 +1,18 @@
+// The brightness control from the google home is not working.
+
 #include <WiFi.h>
 #include <SinricPro.h>
 #include <SinricProBlinds.h>
 #include <SinricProLight.h>
 
 // ================= CREDENTIALS =================
+// ================= CREDENTIALS ================= //   ADD THE CREDENTIALS
 #define WIFI_SSID         
 #define WIFI_PASS         
 #define APP_KEY           
 #define APP_SECRET        
 #define BLINDS_ID         
+#define BLINDS_ID        
 #define LIGHT_ID          
 
 // ================= PIN CONFIGURATION =================
@@ -30,6 +34,12 @@
 
 unsigned long lastClapTime = 0;
 int clapCount = 0;
+#define PIN_RED     25
+#define PIN_GREEN   27 
+#define PIN_BLUE    26 
+
+// Microphone Analog Pin
+#define PIN_MIC     34
 
 // ================= TIMING =================
 #define TOTAL_TRAVEL_TIME 18500 
@@ -376,4 +386,5 @@ void loop() {
   detectDoubleClap(); // Added function call
   checkWebClient();
   
+  checkWebClient();
 }
