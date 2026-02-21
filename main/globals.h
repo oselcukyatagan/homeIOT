@@ -1,0 +1,48 @@
+#ifndef GLOBALS_H
+#define GLOBALS_H
+
+#include <Arduino.h>
+#include <WiFi.h>
+
+
+// Web
+extern WiFiServer webServer;
+extern bool isWebStarted;
+
+// Global states
+extern bool isMusicMode;
+
+
+// Light state
+extern int targetR;
+extern int targetG;
+extern int targetB;
+extern bool lightPower;
+
+extern int currentBrightness;
+
+extern float smoothedVal;
+extern float dcOffset;
+
+extern int lastRawMic;
+
+// Blind state
+extern int blindPos;
+extern int blindTarget;
+extern int blindState;
+extern unsigned long blindLastTime;
+extern bool isPaused;
+extern unsigned long pauseStart;
+
+// Functions shared across files
+void setLEDs(int r, int g, int b);
+
+void syncBlindPosition(int pos);
+void syncLightPower(bool state);
+void syncLightColor(int r, int g, int b);
+
+void checkWebClient();
+
+
+#endif
+
