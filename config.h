@@ -1,13 +1,7 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-// ================= CREDENTIALS =================
-#define WIFI_SSID         "Hizli ve Sifreli"
-#define WIFI_PASS         "k4h4yu7ya4"
-#define APP_KEY           "2b17e6f7-536e-4eef-b5fb-a76726192313"
-#define APP_SECRET        "9c10708f-7e37-4bb6-92bf-d75ee89e6d44-c36b5709-c179-4d57-81b8-a24e6194a5c8"
-#define BLINDS_ID         "698b940fda2ae47a6c938543"
-#define LIGHT_ID          "698b948a2c0599192af14a86"
+#include "secrets.h"
 
 // ================= PIN CONFIGURATION =================
 #define RELAY_DIR   18 
