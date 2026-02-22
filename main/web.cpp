@@ -48,7 +48,7 @@ void checkWebClient() {
   String req = "";
   unsigned long start = millis();
 
-  while (client.connected() && millis() - start <= 200) {
+  while (client.connected() && millis() - start <= 20) {
     if (client.available()) {
       char c = client.read();
       if (c == '\n') {
