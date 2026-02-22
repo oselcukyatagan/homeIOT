@@ -6,6 +6,8 @@
 #include "config.h"
 #include "globals.h"
 
+#include "ota.h"
+
 // ================= GLOBAL DEFINITIONS =================
 WiFiServer webServer(80);
 bool isWebStarted = false;
@@ -13,6 +15,9 @@ bool isWebStarted = false;
 bool isMusicMode = false;
 
 String lastDetectionStatus = "No noise";
+
+bool dirChangePending = false;
+unsigned long dirChangeTime = 0;
 
 int targetR = 255;
 int targetG = 255;
@@ -35,6 +40,10 @@ int minutesRemaining = SILENCE_TIMEOUT_MIN;
 unsigned long lastCheckMillis = 0;
 bool isCurrentlyListening = false;
 bool audioDetectedInWindow = false;
+
+//telnet
+WiFiServer telnetServer(23);
+WiFiClient telnetClient;
 
 // ================= FORWARD DECLARATIONS =================
 void handleBlinds();
@@ -107,6 +116,9 @@ bool onBrightness(const String &deviceId, int &brightness) {
   setLEDs(r, g, b);
 
   Serial.printf("Brightness: %d%%\r\n", currentBrightness);
+  if (telnetClient && telnetClient.connected()) {
+    telnetClient.printf("Brightness: %d%%\r\n", currentBrightness);
+  }
 
   return true;
 }
@@ -172,6 +184,29 @@ void handleAutoOff() {
   }
 }
 
+void handleTelnet() {
+
+  // New client connection
+  if (telnetServer.hasClient()) {
+
+    if (!telnetClient || !telnetClient.connected()) {
+      telnetClient = telnetServer.available();
+      telnetClient.println("Telnet debug connected.");
+      telnetClient.println("System ready.");
+    } else {
+      WiFiClient newClient = telnetServer.available();
+      newClient.stop();
+    }
+  }
+
+  // Incoming data from telnet
+  if (telnetClient && telnetClient.connected() && telnetClient.available()) {
+    String cmd = telnetClient.readStringUntil('\n');
+    cmd.trim();
+    Serial.println("Received via Telnet: " + cmd);
+  }
+}
+
 void setup() {
   Serial.begin(115200);
 
@@ -190,13 +225,12 @@ void setup() {
   setLEDs(0, 0, 0);
 
   WiFi.begin(WIFI_SSID, WIFI_PASS);
-  WiFi.setSleep(true); 
+  WiFi.setSleep(false); 
 
   unsigned long startAttempt = millis();
 
   while (WiFi.status() != WL_CONNECTED &&
         millis() - startAttempt < 15000) {
-    Serial.print(".");
     delay(500);
   }
 
@@ -223,14 +257,32 @@ void setup() {
   myLight.onColor(onColor);
   myLight.onBrightness(onBrightness);
 
-  SinricPro.onConnected([](){ Serial.println("Connected to SinricPro"); });
-  SinricPro.onDisconnected([](){ Serial.println("Disconnected from SinricPro"); });
+  SinricPro.onConnected([](){ 
+    Serial.println("Connected to SinricPro"); 
+    if (telnetClient && telnetClient.connected()) {
+    telnetClient.println("Connected to SinricPro"); 
+  }
+  });
+
+  SinricPro.onDisconnected([](){
+     Serial.println("Disconnected from SinricPro"); 
+    if (telnetClient && telnetClient.connected()) {
+    telnetClient.println("Disconnected from SinricPro");
+  }
+    });
 
   SinricPro.begin(APP_KEY, APP_SECRET);
+
+  setupOTA();
+
+  telnetServer.begin();
+  telnetServer.setNoDelay(true);
 
 }
 
 void loop() {
+
+  handleOTA();
 
   SinricPro.handle();
 
@@ -238,6 +290,8 @@ void loop() {
   handleMusic();
   handleAutoOff();
   checkWebClient();
+
+  handleTelnet();
 }
 
 // Add this at the bottom of your main .ino file

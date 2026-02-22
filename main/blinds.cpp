@@ -44,7 +44,14 @@ void handleBlinds() {
       if (blindPos % 10 == 0 || blindPos == blindTarget) {
         syncBlindPosition(blindPos);
       }
+
+      Serial.printf("Blind position: %d\n", blindPos);
+      if (telnetClient && telnetClient.connected()) {
+        telnetClient.printf("Blind position: %d\n", blindPos);
+      }
     }
+
+
   } else if (blindState != 2) {
     digitalWrite(RELAY_PWR, LOW);
     digitalWrite(RELAY_DIR, LOW);
