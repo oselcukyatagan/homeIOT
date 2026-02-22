@@ -7,6 +7,7 @@
 void setupOTA() {
 
   ArduinoOTA.setHostname("HomeIOT-ESP32");
+  ArduinoOTA.setPassword(OTA_PASSWORD); 
 
   ArduinoOTA.onStart([]() {
 

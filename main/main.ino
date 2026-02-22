@@ -191,8 +191,8 @@ void handleTelnet() {
 
     if (!telnetClient || !telnetClient.connected()) {
       telnetClient = telnetServer.available();
-      telnetClient.println("Telnet debug connected.");
-      telnetClient.println("System ready.");
+      telnetClient.printf("Telnet debug connected.\r\n");
+      telnetClient.printf("System ready.\r\n");
     } else {
       WiFiClient newClient = telnetServer.available();
       newClient.stop();
@@ -260,14 +260,14 @@ void setup() {
   SinricPro.onConnected([](){ 
     Serial.println("Connected to SinricPro"); 
     if (telnetClient && telnetClient.connected()) {
-    telnetClient.println("Connected to SinricPro"); 
+    telnetClient.printf("Connected to SinricPro\r\n"); 
   }
   });
 
   SinricPro.onDisconnected([](){
      Serial.println("Disconnected from SinricPro"); 
     if (telnetClient && telnetClient.connected()) {
-    telnetClient.println("Disconnected from SinricPro");
+    telnetClient.printf("Disconnected from SinricPro\r\n");
   }
     });
 
