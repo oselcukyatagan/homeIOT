@@ -42,6 +42,8 @@ extern int blindState;
 extern unsigned long blindLastTime;
 extern bool isPaused;
 extern unsigned long pauseStart;
+extern bool dirChangePending;
+extern unsigned long dirChangeTime;
 
 // Functions shared across files
 void setLEDs(int r, int g, int b);
