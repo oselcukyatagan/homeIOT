@@ -6,6 +6,9 @@
 #include "config.h"
 #include "globals.h"
 
+#include <esp_task_wdt.h>
+#include <esp_system.h>
+
 #include "ota.h"
 
 // ================= GLOBAL DEFINITIONS =================
@@ -40,6 +43,9 @@ int minutesRemaining = SILENCE_TIMEOUT_MIN;
 unsigned long lastCheckMillis = 0;
 bool isCurrentlyListening = false;
 bool audioDetectedInWindow = false;
+
+unsigned long lastWifiCheck = 0;
+bool sinricConnected = false;
 
 //telnet
 WiFiServer telnetServer(23);
@@ -186,7 +192,6 @@ void handleAutoOff() {
 
 void handleTelnet() {
 
-  // New client connection
   if (telnetServer.hasClient()) {
 
     if (!telnetClient || !telnetClient.connected()) {
@@ -199,16 +204,101 @@ void handleTelnet() {
     }
   }
 
-  // Incoming data from telnet
   if (telnetClient && telnetClient.connected() && telnetClient.available()) {
-    String cmd = telnetClient.readStringUntil('\n');
-    cmd.trim();
-    Serial.println("Received via Telnet: " + cmd);
+
+    char buffer[128];
+
+    int len = telnetClient.readBytesUntil('\n', buffer, sizeof(buffer)-1);
+    buffer[len] = '\0';
+
+    Serial.print("Received via Telnet: ");
+    Serial.println(buffer);
+  }
+}
+
+void handleWiFiReconnect() {
+
+  if (WiFi.status() == WL_CONNECTED) {
+
+    if (!sinricConnected) {
+      Serial.println("WiFi restored. Restarting SinricPro");
+
+      SinricPro.stop();
+      delay(100);
+      SinricPro.begin(APP_KEY, APP_SECRET);
+
+      sinricConnected = true;
+    }
+
+    return;
+  }
+
+  sinricConnected = false;
+
+  unsigned long now = millis();
+
+  if (now - lastWifiCheck < WIFI_RECONNECT_INTERVAL) return;
+
+  lastWifiCheck = now;
+
+  Serial.println("WiFi lost. Attempting reconnect...");
+
+  if (telnetClient && telnetClient.connected()) {
+    telnetClient.println("WiFi lost. Attempting reconnect...");
+  }
+
+  WiFi.disconnect();
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+}
+
+void printResetReason() {
+
+  esp_reset_reason_t reason = esp_reset_reason();
+
+  Serial.print("Reset reason: ");
+
+  switch(reason) {
+
+    case ESP_RST_POWERON:
+      Serial.println("Power On");
+      break;
+
+    case ESP_RST_SW:
+      Serial.println("Software Reset");
+      break;
+
+    case ESP_RST_PANIC:
+      Serial.println("Kernel Panic");
+      break;
+
+    case ESP_RST_INT_WDT:
+    case ESP_RST_TASK_WDT:
+      Serial.println("Watchdog Reset");
+      break;
+
+    case ESP_RST_BROWNOUT:
+      Serial.println("Brownout");
+      break;
+
+    default:
+      Serial.println("Other");
   }
 }
 
 void setup() {
+  
   Serial.begin(115200);
+
+  esp_task_wdt_config_t wdt_config = {
+    .timeout_ms = WDT_TIMEOUT * 1000,
+    .idle_core_mask = (1 << portNUM_PROCESSORS) - 1,
+    .trigger_panic = true
+  };
+
+  esp_task_wdt_init(&wdt_config);
+  esp_task_wdt_add(NULL);
+
+  printResetReason();
 
   pinMode(PIN_MIC, INPUT);
 
@@ -230,20 +320,23 @@ void setup() {
   unsigned long startAttempt = millis();
 
   while (WiFi.status() != WL_CONNECTED &&
-        millis() - startAttempt < 15000) {
-    delay(500);
-  }
+      millis() - startAttempt < 15000) {
+  delay(500);
+  yield();
+}
 
   if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("\nWiFi FAILED");
-    while (true);
-  }
+
+  Serial.println("\nWiFi initial connection failed. Continuing...");
+
+} else {
 
   Serial.println("\r\nWiFi Connected.");
   Serial.print("Web Server URL: http://");
   Serial.print(WiFi.localIP());
   Serial.println(":80");
 
+}
 
   webServer.begin();
   isWebStarted = true;
@@ -292,9 +385,25 @@ void loop() {
   checkWebClient();
 
   handleTelnet();
+
+  handleWiFiReconnect();
+
+  esp_task_wdt_reset();
+
+  static unsigned long lastHeapPrint = 0;
+
+if (millis() - lastHeapPrint > 60000) {
+    lastHeapPrint = millis();
+
+    Serial.printf("Free heap: %d\n", ESP.getFreeHeap());
+
+    if (telnetClient && telnetClient.connected()) {
+        telnetClient.printf("Free heap: %d\n", ESP.getFreeHeap());
+    }
 }
 
-// Add this at the bottom of your main .ino file
+}
+
 
 void syncBlindPosition(int pos) {
   SinricProBlinds &myBlinds = SinricPro[BLINDS_ID];

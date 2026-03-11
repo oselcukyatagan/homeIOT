@@ -3,6 +3,7 @@
 #include "ota.h"
 #include "globals.h"
 #include "config.h"
+#include <esp_task_wdt.h>
 
 void setupOTA() {
 
@@ -14,12 +15,14 @@ void setupOTA() {
     digitalWrite(RELAY_PWR, LOW);
     digitalWrite(RELAY_DIR, LOW);
     setLEDs(0, 0, 0);
+    esp_task_wdt_delete(NULL);
 
     Serial.println("OTA Start - Hardware Safely Locked");
   });
 
   ArduinoOTA.onEnd([]() {
     Serial.println("\nOTA End. Rebooting...");
+    esp_task_wdt_add(NULL);
     delay(100);
     ESP.restart();
   });

@@ -28,4 +28,7 @@
 #define SILENCE_TIMEOUT_MIN   15     // Turn off after 15 silent checks
 #define AUTO_OFF_THRESHOLD    300    // Threshold to ignore low noise
 
+#define WDT_TIMEOUT 60
+#define WIFI_RECONNECT_INTERVAL 5000
+
 #endif
