@@ -58,5 +58,7 @@ void syncLightColor(int r, int g, int b);
 void checkWebClient();
 
 
+
+
 #endif
 
