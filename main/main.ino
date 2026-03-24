@@ -47,6 +47,8 @@ bool audioDetectedInWindow = false;
 unsigned long lastWifiCheck = 0;
 bool sinricConnected = false;
 
+String resetReasonStr = "";
+
 //telnet
 WiFiServer telnetServer(23);
 WiFiClient telnetClient;
@@ -89,8 +91,14 @@ bool onPowerState(const String &deviceId, bool &state) {
     setLEDs(0, 0, 0);
   }
 
+  Serial.printf("Light power: %s\r\n", lightPower ? "ON" : "OFF");
+  if (telnetClient && telnetClient.connected()) {
+    telnetClient.printf("Light power: %s\r\n", lightPower ? "ON" : "OFF");
+  }
+
   return true;
 }
+
 
 bool onColor(const String &deviceId, byte &r, byte &g, byte &b) {
   isMusicMode = false;
@@ -105,6 +113,11 @@ bool onColor(const String &deviceId, byte &r, byte &g, byte &b) {
   int scaledB = (targetB * currentBrightness) / 100;
 
   setLEDs(scaledR, scaledG, scaledB);
+
+  Serial.printf("Color set: R=%d G=%d B=%d\r\n", targetR, targetG, targetB);
+  if (telnetClient && telnetClient.connected()) {
+    telnetClient.printf("Color set: R=%d G=%d B=%d\r\n", targetR, targetG, targetB);
+  }
 
   return true;
 }
@@ -191,12 +204,11 @@ void handleAutoOff() {
 }
 
 void handleTelnet() {
-
   if (telnetServer.hasClient()) {
-
     if (!telnetClient || !telnetClient.connected()) {
       telnetClient = telnetServer.available();
       telnetClient.printf("Telnet debug connected.\r\n");
+      telnetClient.printf("Last reset reason: %s\r\n", resetReasonStr.c_str());
       telnetClient.printf("System ready.\r\n");
     } else {
       WiFiClient newClient = telnetServer.available();
@@ -205,10 +217,8 @@ void handleTelnet() {
   }
 
   if (telnetClient && telnetClient.connected() && telnetClient.available()) {
-
     char buffer[128];
-
-    int len = telnetClient.readBytesUntil('\n', buffer, sizeof(buffer)-1);
+    int len = telnetClient.readBytesUntil('\n', buffer, sizeof(buffer) - 1);
     buffer[len] = '\0';
 
     Serial.print("Received via Telnet: ");
@@ -252,37 +262,37 @@ void handleWiFiReconnect() {
 }
 
 void printResetReason() {
-
   esp_reset_reason_t reason = esp_reset_reason();
 
-  Serial.print("Reset reason: ");
-
   switch(reason) {
-
     case ESP_RST_POWERON:
-      Serial.println("Power On");
+      resetReasonStr = "Power On";
       break;
 
     case ESP_RST_SW:
-      Serial.println("Software Reset");
+      resetReasonStr = "Software Reset";
       break;
 
     case ESP_RST_PANIC:
-      Serial.println("Kernel Panic");
+      resetReasonStr = "Kernel Panic";
       break;
 
     case ESP_RST_INT_WDT:
     case ESP_RST_TASK_WDT:
-      Serial.println("Watchdog Reset");
+      resetReasonStr = "Watchdog Reset";
       break;
 
     case ESP_RST_BROWNOUT:
-      Serial.println("Brownout");
+      resetReasonStr = "Brownout";
       break;
 
     default:
-      Serial.println("Other");
+      resetReasonStr = "Other";
+      break;
   }
+
+  Serial.print("Reset reason: ");
+  Serial.println(resetReasonStr);
 }
 
 void setup() {

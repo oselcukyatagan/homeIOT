@@ -20,8 +20,6 @@ extern bool isCurrentlyListening;
 extern bool audioDetectedInWindow;
 extern String lastDetectionStatus;
 
-
-
 // Update forward declarations
 void handleAutoOff();
 
