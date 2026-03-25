@@ -15,3 +15,7 @@ The current system features:
 * **IIR Low-Pass Filter:** Smooths raw microphone data for fluid LED transitions.
 * **Auto-Off Timer:** Polls audio for 5 seconds every minute; shuts down LEDs after 15 minutes of silence.
 * **Web Dashboard:** Local HTTP server provides secondary control for blinds and music mode selection.
+
+<img width="1916" height="878" alt="image" src="https://github.com/user-attachments/assets/3c140190-5b17-4957-866a-ddc58cd7e458" />
+
+<img width="1418" height="551" alt="image" src="https://github.com/user-attachments/assets/aee32597-78cc-4ff5-b98e-c95eec871d36" />
