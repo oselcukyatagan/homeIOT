@@ -13,16 +13,6 @@ extern bool isWebStarted;
 extern bool isMusicMode;
 extern WiFiClient telnetClient;
 
-// Auto-off variables
-extern int minutesRemaining;
-extern unsigned long lastCheckMillis;
-extern bool isCurrentlyListening;
-extern bool audioDetectedInWindow;
-extern String lastDetectionStatus;
-
-// Update forward declarations
-void handleAutoOff();
-
 // Light state
 extern int targetR;
 extern int targetG;
@@ -52,6 +42,9 @@ void setLEDs(int r, int g, int b);
 void syncBlindPosition(int pos);
 void syncLightPower(bool state);
 void syncLightColor(int r, int g, int b);
+
+void loadBlindPosition();
+void saveBlindPosition();
 
 void checkWebClient();
 

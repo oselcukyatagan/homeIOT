@@ -1,21 +1,58 @@
 # homeIOT
-IOT applications for my home
+IOT applications for my home. An ESP32-S3 controls the motorized blinds and the RGB LED strip in the living room. Both can be controlled from Alexa / Google Home through SinricPro and from a local web page.
 
-The current system features:
+## Features
+* **Time-Based Position Control:** The travel time of the motor is mapped to a 0–100% scale, no limit switches are needed.
+* **Position Memory:** The blinds position is saved to flash every 5% and when the blinds stop, so it is kept after a reboot or a power cut.
+* **Relay Interlocking:** A 1-second delay is enforced during direction changes to prevent back-EMF spikes and contact welding.
+* **Mechanical Settling Delay:** A 50ms pause is added after the direction is selected so the relay contacts are seated before power is applied.
+* **SinricPro Integration:** Blinds position, light power, color and brightness can be controlled remotely.
+* **Music Mode:** The LEDs follow the volume picked up by the microphone. DC offset tracking and a low-pass filter are used to clean the signal.
+* **Web Dashboard:** Blinds and music mode can be controlled from `http://<board-ip>/`.
+* **OTA Updates:** The code can be uploaded over WiFi after the first USB upload.
+* **Telnet Debug:** Reset reason, blinds position and free heap are printed on port 23.
+* **Watchdog and WiFi Reconnect:** The board is restarted if the loop hangs and the connection is restored automatically.
 
-* **Time-Based Position Control:** Maps  travel time to a 0–100% scale without physical limit switches.
-* **Relay Interlocking:** Enforces a 1-second delay during direction changes to prevent back-EMF spikes and contact welding.
-* **Mechanical Settling Delay:** Includes a 50ms pause after direction selection to ensure relay armatures are seated before applying power.
-* **Boundary Protection:** Hard-coded limits prevent the position counter from exceeding 100 or falling below 0.
-* **SinricPro Integration:** Provides remote control for blinds, RGB color selection, and power state via WebSocket.
-* **Inverted RGB Logic:** Specifically configured for common-anode LED strips ().
-* **Dual Mode Control:** Seamlessly switches between static color control and audio-reactive Music Mode.
-* **Advanced Audio DSP:** * **Dynamic DC Offset:** Real-time tracking of microphone bias to eliminate thermal drift.
-* **Envelope Follower:** Asymmetric attack/decay algorithm to distinguish sustained audio from electrical EMI.
-* **IIR Low-Pass Filter:** Smooths raw microphone data for fluid LED transitions.
-* **Auto-Off Timer:** Polls audio for 5 seconds every minute; shuts down LEDs after 15 minutes of silence.
-* **Web Dashboard:** Local HTTP server provides secondary control for blinds and music mode selection.
+## Pins
+| Function | GPIO |
+|---|---|
+| Relay: direction | 18 |
+| Relay: power | 17 |
+| LED red / green / blue | 4 / 5 / 6 |
+| Microphone (analog) | 9 |
 
-<img width="1916" height="878" alt="image" src="https://github.com/user-attachments/assets/3c140190-5b17-4957-866a-ddc58cd7e458" />
+GPIO19 and GPIO20 should not be used since they are the USB data lines of the ESP32-S3. The microphone should be connected to one of GPIO1–10 since only these pins can be read while WiFi is on.
 
-<img width="1418" height="551" alt="image" src="https://github.com/user-attachments/assets/aee32597-78cc-4ff5-b98e-c95eec871d36" />
+## Setup
+
+### 1. Arduino IDE
+The **esp32 by Espressif Systems** (3.x) board package and the **SinricPro** library need to be installed. The board package URL is added from **File → Preferences**:
+`https://espressif.github.io/arduino-esp32/package_esp32_index.json`
+
+### 2. Secrets
+Before flashing the code, secrets.h file needs to be created by copying the `envVariablesTemplate.h` file and the variables should be completed with your information.  `secrets.h` is git-ignored.
+
+```cpp
+#define WIFI_SSID     "..."
+#define WIFI_PASS     "..."
+#define APP_KEY       "..."   // SinricPro
+#define APP_SECRET    "..."
+#define BLINDS_ID     "..."
+#define LIGHT_ID      "..."
+#define OTA_PASSWORD  "..."
+```
+
+### 3. Board Settings
+| Setting | Value |
+|---|---|
+| Board | ESP32S3 Dev Module |
+| Flash Size | 16MB (128Mb) |
+| Partition Scheme | 16M Flash (3MB APP/9.9MB FATFS) |
+| USB CDC On Boot | Disabled |
+| Erase All Flash Before Sketch Upload | Disabled |
+
+### 4. Upload
+The first upload should be done over USB from the port labelled **COM** on the board. After that, the code can be uploaded over WiFi by selecting the `HomeIOT-ESP32` network port. `espota.exe` needs to be allowed in Windows Firewall for OTA to work.
+
+## Notes
+If the blinds position does not match the saved position, the blinds should be moved fully up or down once. The motor stops at its own end limit and the saved position is corrected.
