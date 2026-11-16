@@ -17,8 +17,6 @@ bool isWebStarted = false;
 
 bool isMusicMode = false;
 
-String lastDetectionStatus = "No noise";
-
 bool dirChangePending = false;
 unsigned long dirChangeTime = 0;
 
@@ -38,11 +36,6 @@ int blindState = 2;
 unsigned long blindLastTime = 0;
 bool isPaused = false;
 unsigned long pauseStart = 0;
-
-int minutesRemaining = SILENCE_TIMEOUT_MIN;
-unsigned long lastCheckMillis = 0;
-bool isCurrentlyListening = false;
-bool audioDetectedInWindow = false;
 
 unsigned long lastWifiCheck = 0;
 bool sinricConnected = false;
@@ -140,67 +133,6 @@ bool onBrightness(const String &deviceId, int &brightness) {
   }
 
   return true;
-}
-
-void handleAutoOff() {
-  if (isMusicMode || !lightPower) {
-    minutesRemaining = SILENCE_TIMEOUT_MIN;
-    isCurrentlyListening = false;
-    lastDetectionStatus = "Waiting...";
-    return;
-  }
-
-  unsigned long currentMillis = millis();
-
-  if (!isCurrentlyListening && (currentMillis - lastCheckMillis >= CHECK_INTERVAL_MS)) {
-    isCurrentlyListening = true;
-    audioDetectedInWindow = false;
-    lastDetectionStatus = "No noise";
-    lastCheckMillis = currentMillis;
-  }
-
-  if (isCurrentlyListening) {
-    int raw = analogRead(PIN_MIC);
-
-    // 1. Dynamic DC Offset Tracking
-    dcOffset = (dcOffset * 0.99) + (raw * 0.01);
-    
-    // 2. Absolute Amplitude
-    float currentAmplitude = abs(raw - dcOffset);
-
-    // 3. Envelope Follower (Fast Attack, Slow Decay)
-    static float envelope = 0;
-    if (currentAmplitude > envelope) {
-      envelope = (envelope * 0.2) + (currentAmplitude * 0.8); 
-    } else {
-      envelope = (envelope * 0.99) + (currentAmplitude * 0.01); 
-    }
-
-    // 4. Threshold Evaluation
-    if (envelope > AUTO_OFF_THRESHOLD) {
-      audioDetectedInWindow = true;
-      lastDetectionStatus = "Sound detected"; 
-    }
-
-    if (currentMillis - lastCheckMillis >= LISTEN_DURATION_MS) {
-      isCurrentlyListening = false;
-      envelope = 0; // Reset envelope for next minute
-      
-      if (audioDetectedInWindow) {
-        minutesRemaining = SILENCE_TIMEOUT_MIN;
-      } else {
-        if (minutesRemaining > 0) minutesRemaining--;
-      }
-
-      if (minutesRemaining <= 0) {
-        lightPower = false;
-        setLEDs(0, 0, 0);
-        syncLightPower(false);
-      }
-      
-      lastCheckMillis = currentMillis; 
-    }
-  }
 }
 
 void handleTelnet() {
@@ -322,6 +254,8 @@ void setup() {
   digitalWrite(RELAY_PWR, LOW);
   digitalWrite(RELAY_DIR, LOW);
 
+  loadBlindPosition();
+
   setLEDs(0, 0, 0);
 
   WiFi.begin(WIFI_SSID, WIFI_PASS);
@@ -361,7 +295,8 @@ void setup() {
   myLight.onBrightness(onBrightness);
 
   SinricPro.onConnected([](){ 
-    Serial.println("Connected to SinricPro"); 
+    Serial.println("Connected to SinricPro");
+    syncBlindPosition(blindPos);
     if (telnetClient && telnetClient.connected()) {
     telnetClient.printf("Connected to SinricPro\r\n"); 
   }
@@ -391,7 +326,6 @@ void loop() {
 
   handleBlinds();
   handleMusic();
-  handleAutoOff();
   checkWebClient();
 
   handleTelnet();

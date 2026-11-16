@@ -12,6 +12,7 @@ void setupOTA() {
 
   ArduinoOTA.onStart([]() {
 
+    saveBlindPosition();
     digitalWrite(RELAY_PWR, LOW);
     digitalWrite(RELAY_DIR, LOW);
     setLEDs(0, 0, 0);

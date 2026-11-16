@@ -18,18 +18,6 @@ void sendHtmlResponse(WiFiClient &client) {
   
   client.print("<h1>Living Room Control</h1>");
 
-  // Status Section
-  client.print("<div class='timer'>");
-  if (isMusicMode) {
-    client.print("Auto-Off: <b>Paused (Music)</b>");
-  } else if (!lightPower) {
-    client.print("Auto-Off: <b>Lights Off</b>");
-  } else {
-    client.print("Auto-Off in: <b>" + String(minutesRemaining) + " min</b>");
-    client.print("<div class='status-line'>Mic Status: <b>" + lastDetectionStatus + "</b></div>");
-  }
-  client.print("</div>");
-
   client.print("<h3>Blinds</h3>");
   client.print("<a href='/UP'><button class='btn u'>UP</button></a>");
   client.print("<a href='/STOP'><button class='btn s'>STOP</button></a>");
